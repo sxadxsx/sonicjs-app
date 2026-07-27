@@ -48,6 +48,10 @@ DO_NOT_TRACK = "1"
 [observability]
 enabled = true
 
+# Keep isolate warm (reduces multi-second cold TTFB)
+[triggers]
+crons = ["*/1 * * * *"]
+
 [env.production]
 name = "sonicjs-app-production"
 vars = { ENVIRONMENT = "production", CORS_ORIGINS = "https://sonicjs-app-production.cms-74e.workers.dev,https://sonicjs-app.cms-74e.workers.dev", SONICJS_TELEMETRY = "false", DO_NOT_TRACK = "1" }
@@ -74,3 +78,6 @@ id = "6ba1caad5eee4c448e0ba09f27c55416"
 binding = "CACHE_KV"
 id = "6ce3312943cb4fc792746d4a8232b1da"
 preview_id = "6a233acad0cd43b28e0eb23e2d96d440"
+
+[env.production.triggers]
+crons = ["*/1 * * * *"]

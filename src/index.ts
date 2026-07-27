@@ -463,4 +463,41 @@ app.post('/_setup/reset-password', async (c) => {
 })
 
 
-export default app
+/**
+ * Keep the Worker isolate warm and ensure bootstrap has run.
+ * Cron alone is not multi-region, but it greatly reduces cold TTFB
+ * on the primary routing path for workers.dev.
+ */
+async function warmup(env: any, ctx?: ExecutionContext) {
+  try {
+    if (typeof (app as any).boot === 'function') {
+      await (app as any).boot(env)
+    }
+  } catch (err) {
+    console.error('[warmup] boot failed', err)
+  }
+  try {
+    const req = new Request('https://warmup.local/api/health', {
+      method: 'GET',
+      headers: { 'x-warmup': '1' }
+    })
+    await app.fetch(req, env, ctx as any)
+  } catch (err) {
+    console.error('[warmup] fetch failed', err)
+  }
+}
+
+const workerHandler = {
+  fetch: (request: Request, env: any, ctx: ExecutionContext) =>
+    app.fetch(request, env, ctx),
+  scheduled: (
+    controller: ScheduledController,
+    env: any,
+    ctx: ExecutionContext
+  ) => {
+    console.log('[warmup] cron', controller.cron, 'at', controller.scheduledTime)
+    ctx.waitUntil(warmup(env, ctx))
+  }
+}
+
+export default workerHandler
