@@ -1,14 +1,15 @@
 /**
  * Blog Posts Collection
  *
- * Example collection configuration for blog posts
+ * Example collection configuration for blog posts (SonicJS v3 document model)
  */
 
 import type { CollectionConfig } from '@sonicjs-cms/core'
 
 export default {
-  name: 'blog-posts',
+  name: 'blog_post',
   displayName: 'Blog Posts',
+  slug: 'blog-posts',
   description: 'Manage your blog posts',
   icon: '📝',
 
@@ -34,7 +35,7 @@ export default {
         helpText: 'A short summary of the post'
       },
       content: {
-        type: 'quill',
+        type: 'lexical',
         title: 'Content',
         required: true
       },
@@ -43,20 +44,13 @@ export default {
         title: 'Featured Image'
       },
       author: {
-        type: 'string',
+        type: 'user',
         title: 'Author',
         required: true
       },
       publishedAt: {
         type: 'datetime',
         title: 'Published Date'
-      },
-      status: {
-        type: 'select',
-        title: 'Status',
-        enum: ['draft', 'published', 'archived'],
-        enumLabels: ['Draft', 'Published', 'Archived'],
-        default: 'draft'
       },
       tags: {
         type: 'string',
@@ -67,9 +61,22 @@ export default {
     required: ['title', 'slug', 'content', 'author']
   },
 
-  // List view configuration
   listFields: ['title', 'author', 'status', 'publishedAt'],
-  searchFields: ['title', 'excerpt', 'author'],
+  searchFields: ['title', 'excerpt', 'content'],
   defaultSort: 'createdAt',
-  defaultSortOrder: 'desc'
+  defaultSortOrder: 'desc',
+
+  managed: true,
+  isActive: true,
+
+  // Opt in to public read access for the public API
+  access: {
+    public: ['read']
+  },
+
+  // Per-collection cache (seconds)
+  cache: {
+    enabled: true,
+    ttl: 300
+  }
 } satisfies CollectionConfig

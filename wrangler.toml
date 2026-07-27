@@ -1,51 +1,53 @@
 name = "sonicjs-app"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# Cloudflare Workers settings
 workers_dev = true
 account_id = "74e50d323e8da3847ee86ef23bee8a1b"
 
 # D1 Database
+# NOTE: v3 uses a new schema (auth_* + documents). Existing v2 tables in this
+# database are left in place; v3 migrations only CREATE IF NOT EXISTS new tables.
+# For a clean greenfield DB, create a new D1 and update database_id (requires D1 token perms).
 [[d1_databases]]
 binding = "DB"
 database_name = "sonicjs-db"
 database_id = "2fd144ed-cd8f-40f4-b86d-b14068a2708f"
 migrations_dir = "./node_modules/@sonicjs-cms/core/migrations"
 
-# R2 Bucket for media storage
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "sonicjs-media"
-
+# R2 Bucket for media storage (v3 expects MEDIA_BUCKET)
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"
 bucket_name = "sonicjs-media"
 
-# Legacy/general KV (existing namespace titled "kv")
+# Optional alias kept for any legacy code paths
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "sonicjs-media"
+
+# General KV
 [[kv_namespaces]]
 binding = "KV"
 id = "6ba1caad5eee4c448e0ba09f27c55416"
 
-# Cache KV used by SonicJS cache plugin / rate limiting
+# Cache KV (required by v3 bootstrap + cache plugin)
 [[kv_namespaces]]
 binding = "CACHE_KV"
 id = "d5bdcffafd80410d8425637095607e3e"
 preview_id = "64d13dd9c8ac49fa93205ac22202d08e"
 
-# Environment variables
 [vars]
 ENVIRONMENT = "development"
+# Comma-separated browser origins allowed for CORS (adjust for your domains)
+CORS_ORIGINS = "http://localhost:8787,https://sonicjs-app.cms-74e.workers.dev,https://sonicjs-app-production.cms-74e.workers.dev"
 
-# Observability
 [observability]
 enabled = true
 
-# Production environment
 [env.production]
 name = "sonicjs-app-production"
-vars = { ENVIRONMENT = "production" }
+vars = { ENVIRONMENT = "production", CORS_ORIGINS = "https://sonicjs-app-production.cms-74e.workers.dev,https://sonicjs-app.cms-74e.workers.dev" }
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -54,11 +56,11 @@ database_id = "2fd144ed-cd8f-40f4-b86d-b14068a2708f"
 migrations_dir = "./node_modules/@sonicjs-cms/core/migrations"
 
 [[env.production.r2_buckets]]
-binding = "BUCKET"
+binding = "MEDIA_BUCKET"
 bucket_name = "sonicjs-media"
 
 [[env.production.r2_buckets]]
-binding = "MEDIA_BUCKET"
+binding = "BUCKET"
 bucket_name = "sonicjs-media"
 
 [[env.production.kv_namespaces]]
