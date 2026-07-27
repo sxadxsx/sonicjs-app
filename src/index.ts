@@ -328,4 +328,100 @@ app.post('/_setup/repair-type-ids', async (c) => {
   return c.json({ before: before.results, after: after.results })
 })
 
+
+/**
+ * Reset a user's password to a Better Auth–compatible scrypt hash.
+ *
+ * POST /_setup/reset-password
+ * Header: x-setup-secret
+ * JSON body: { "email": "...", "password": "..." }
+ *   or { "email": "...", "hash": "salt:key" }
+ */
+app.post('/_setup/reset-password', async (c) => {
+  const secret = c.req.header('x-setup-secret')
+  const expected =
+    (c.env as any).MIGRATION_SECRET || c.env.JWT_SECRET || c.env.BETTER_AUTH_SECRET
+  if (!expected || secret !== expected) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  let body: any
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400)
+  }
+
+  const email = String(body.email || '').toLowerCase().trim()
+  if (!email) return c.json({ error: 'email required' }, 400)
+
+  let passwordHash = body.hash ? String(body.hash) : ''
+  if (!passwordHash) {
+    const password = String(body.password || '')
+    if (password.length < 8) {
+      return c.json({ error: 'password must be at least 8 chars (or pass hash)' }, 400)
+    }
+    // Prefer Better Auth scrypt via dynamic import when available in the isolate.
+    try {
+      const mod = await import('@better-auth/utils/password')
+      passwordHash = await mod.hashPassword(password)
+    } catch {
+      // Fallback: SonicJS AuthManager PBKDF2 (works for AuthManager paths, not BA sign-in)
+      const { AuthManager } = await import('@sonicjs-cms/core')
+      passwordHash = await AuthManager.hashPassword(password)
+    }
+  }
+
+  const user = await c.env.DB.prepare(
+    'SELECT id, email, role FROM auth_user WHERE email = ?'
+  ).bind(email).first<any>()
+
+  if (!user) {
+    return c.json({ error: `user not found: ${email}` }, 404)
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  await c.env.DB.prepare(
+    `UPDATE auth_user
+     SET password_hash = ?, is_active = 1, failed_login_count = 0, locked_until = NULL, updated_at = ?
+     WHERE id = ?`
+  ).bind(passwordHash, now, user.id).run()
+
+  const cred = await c.env.DB.prepare(
+    "SELECT id FROM auth_account WHERE user_id = ? AND provider_id = 'credential'"
+  ).bind(user.id).first<any>()
+
+  if (cred) {
+    await c.env.DB.prepare(
+      `UPDATE auth_account
+       SET password = ?, account_id = ?, updated_at = ?
+       WHERE id = ?`
+    ).bind(passwordHash, user.id, now, cred.id).run()
+  } else {
+    await c.env.DB.prepare(
+      `INSERT INTO auth_account (id, user_id, account_id, provider_id, password, created_at, updated_at)
+       VALUES (?, ?, ?, 'credential', ?, ?, ?)`
+    ).bind(`cred-${user.id}`, user.id, user.id, passwordHash, now, now).run()
+  }
+
+  // Ensure admin role stays admin if requested
+  if (body.makeAdmin) {
+    await c.env.DB.prepare(
+      `UPDATE auth_user SET role = 'admin', is_super_admin = 1, updated_at = ? WHERE id = ?`
+    ).bind(now, user.id).run()
+  }
+
+  return c.json({
+    success: true,
+    user: { id: user.id, email: user.email, role: user.role },
+    hashPrefix: passwordHash.slice(0, 24),
+    hashFormat: passwordHash.includes(':') && !passwordHash.startsWith('pbkdf2:')
+      ? 'better-auth-scrypt'
+      : passwordHash.startsWith('pbkdf2:')
+        ? 'pbkdf2'
+        : 'unknown'
+  })
+})
+
+
 export default app
