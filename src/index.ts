@@ -405,15 +405,42 @@ app.post('/_setup/reset-password', async (c) => {
   }
 
   // Ensure admin role stays admin if requested
-  if (body.makeAdmin) {
+  let rbac: string | null = null
+  if (body.makeAdmin !== false) {
     await c.env.DB.prepare(
       `UPDATE auth_user SET role = 'admin', is_super_admin = 1, updated_at = ? WHERE id = ?`
     ).bind(now, user.id).run()
+    try {
+      const { RbacService } = await import('@sonicjs-cms/core')
+      const rbacSvc = new RbacService(c.env.DB, c.env.CACHE_KV)
+      // Seed system roles/grants if missing, then attach admin role to this user
+      if (typeof (rbacSvc as any).ensureSystemRbacSeed === 'function') {
+        await (rbacSvc as any).ensureSystemRbacSeed()
+      }
+      await rbacSvc.addUserRoleByName(String(user.id), 'admin')
+      // Clear cached empty perms if any
+      try {
+        await c.env.CACHE_KV.delete(`rbac:perms:${user.id}`)
+      } catch {}
+      rbac = 'admin'
+    } catch (err) {
+      rbac = `failed: ${err instanceof Error ? err.message : String(err)}`
+    }
   }
+
+  const refreshed = await c.env.DB.prepare(
+    'SELECT id, email, role, is_super_admin FROM auth_user WHERE id = ?'
+  ).bind(user.id).first<any>()
 
   return c.json({
     success: true,
-    user: { id: user.id, email: user.email, role: user.role },
+    user: {
+      id: refreshed?.id || user.id,
+      email: refreshed?.email || user.email,
+      role: refreshed?.role || user.role,
+      isSuperAdmin: refreshed?.is_super_admin
+    },
+    rbac,
     hashPrefix: passwordHash.slice(0, 24),
     hashFormat: passwordHash.includes(':') && !passwordHash.startsWith('pbkdf2:')
       ? 'better-auth-scrypt'
