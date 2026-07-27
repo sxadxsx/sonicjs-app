@@ -30,3 +30,7 @@ vars = { ENVIRONMENT = "production" }
 # Observability
 [observability]
 enabled = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "6ba1caad5eee4c448e0ba09f27c55416"
