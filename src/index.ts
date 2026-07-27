@@ -488,8 +488,48 @@ async function warmup(env: any, ctx?: ExecutionContext) {
 }
 
 const workerHandler = {
-  fetch: (request: Request, env: any, ctx: ExecutionContext) =>
-    app.fetch(request, env, ctx),
+  async fetch(request: Request, env: any, ctx: ExecutionContext) {
+    const wallStart = Date.now()
+
+    // Bypass the entire SonicJS/Hono stack. If this is also multi-second,
+    // the delay is Cloudflare isolate scheduling / module load, not app code.
+    const url = new URL(request.url)
+    if (url.pathname === '/_ping') {
+      return new Response(
+        JSON.stringify({
+          pong: true,
+          wallMs: Date.now() - wallStart,
+          ts: new Date().toISOString()
+        }),
+        {
+          headers: {
+            'content-type': 'application/json',
+            'x-wall-time': `${Date.now() - wallStart}ms`,
+            'x-bypass': '1',
+            'cache-control': 'no-store'
+          }
+        }
+      )
+    }
+
+    const response = await app.fetch(request, env, ctx)
+    const wallMs = Date.now() - wallStart
+    const headers = new Headers(response.headers)
+    headers.set('x-wall-time', `${wallMs}ms`)
+    // Help browsers/devtools show timing without guessing.
+    const existing = headers.get('server-timing')
+    const wallMetric = `wall;dur=${wallMs}`
+    headers.set(
+      'server-timing',
+      existing ? `${existing}, ${wallMetric}` : wallMetric
+    )
+    headers.set('x-debug-path', url.pathname)
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    })
+  },
   scheduled: (
     controller: ScheduledController,
     env: any,
