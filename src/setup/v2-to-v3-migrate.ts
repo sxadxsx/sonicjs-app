@@ -63,8 +63,7 @@ function parseJson<T = any>(value: unknown, fallback: T): T {
 function mapCollectionToTypeId(name: string): string {
   const n = (name || '').trim().toLowerCase()
   if (!n) return 'unknown'
-  // Map common v2 blog-ish collections onto the built-in v3 blog_post type so
-  // /api/content (which only lists code-registered collections) can see them.
+  // Canonical app collection name is blogcms
   if (
     n === 'blog_posts' ||
     n === 'blog-posts' ||
@@ -75,7 +74,7 @@ function mapCollectionToTypeId(name: string): string {
     n === 'blog-cms' ||
     n === 'posts'
   ) {
-    return 'blog_post'
+    return 'blogcms'
   }
   // Prefer snake_case type ids
   return n.replace(/-/g, '_').replace(/\s+/g, '_')
@@ -359,9 +358,9 @@ export async function migrateV2ToV3(db: D1, opts: MigrateOptions = {}): Promise<
   )
   await ensureDocumentType(
     db,
-    'blog_post',
-    'Blog Post',
-    'Blog post',
+    'blogcms',
+    'blogcms',
+    'Blog CMS content',
     { type: 'object', properties: {} },
     dryRun
   )
@@ -504,17 +503,17 @@ export async function migrateV2ToV3(db: D1, opts: MigrateOptions = {}): Promise<
     notes.push('v2 content table not found — skipped content migration')
   }
 
-  // Repair earlier migrations that used raw collection names instead of blog_post
+  // Keep blog content on the app collection type id: blogcms
   if (!dryRun) {
     try {
       await db
         .prepare(
           `UPDATE documents
-           SET type_id = 'blog_post'
-           WHERE type_id IN ('blogcms', 'blog-posts', 'blog_posts', 'blog', 'posts')`
+           SET type_id = 'blogcms'
+           WHERE type_id IN ('blog_post', 'blog-posts', 'blog_posts', 'blog', 'posts')`
         )
         .run()
-      notes.push("Repaired type_id aliases → blog_post where needed")
+      notes.push('Repaired type_id aliases → blogcms where needed')
     } catch (err) {
       notes.push(`type_id repair skipped: ${err instanceof Error ? err.message : String(err)}`)
     }

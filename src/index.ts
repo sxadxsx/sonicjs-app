@@ -7,13 +7,13 @@
 import { createSonicJSApp, registerCollections } from '@sonicjs-cms/core'
 import type { SonicJSConfig } from '@sonicjs-cms/core'
 
-import blogPostsCollection from './collections/blog-posts.collection'
+import blogcmsCollection from './collections/blogcms.collection'
 import { CORE_MIGRATIONS } from './db/core-migrations'
 import { migrateV2ToV3 } from './setup/v2-to-v3-migrate'
 
 // Register collections BEFORE creating the app
 registerCollections([
-  blogPostsCollection,
+  blogcmsCollection,
   // Add more collections here as you create them
 ])
 
@@ -287,7 +287,7 @@ app.get('/_setup/inspect-v2', async (c) => {
       "SELECT id, root_id, type_id, status, is_published, is_current_draft, deleted_at, title, slug FROM documents WHERE id IN (SELECT id FROM content) OR root_id IN (SELECT id FROM content)"
     ).all()).results,
     blogDocs: (await c.env.DB.prepare(
-      "SELECT id, type_id, status, is_published, deleted_at, title, slug FROM documents WHERE type_id = 'blog_post'"
+      "SELECT id, type_id, status, is_published, deleted_at, title, slug FROM documents WHERE type_id = 'blogcms'"
     ).all()).results,
     documentTypes: allTypes.results
   })
@@ -306,8 +306,8 @@ app.post('/_setup/repair-type-ids', async (c) => {
   ).all()
   await c.env.DB.prepare(
     `UPDATE documents
-     SET type_id = 'blog_post'
-     WHERE type_id IN ('blogcms', 'blog-posts', 'blog_posts', 'blog', 'posts')`
+     SET type_id = 'blogcms'
+     WHERE type_id IN ('blog_post', 'blog-posts', 'blog_posts', 'blog', 'posts')`
   ).run()
   // Ensure published rows are visible
   await c.env.DB.prepare(

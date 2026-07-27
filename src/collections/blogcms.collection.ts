@@ -1,16 +1,16 @@
 /**
- * Blog Posts Collection
+ * blogcms Collection
  *
- * Example collection configuration for blog posts (SonicJS v3 document model)
+ * Content collection for the blogcms document type.
  */
 
 import type { CollectionConfig } from '@sonicjs-cms/core'
 
 export default {
-  name: 'blog_post',
-  displayName: 'Blog Posts',
-  slug: 'blog-posts',
-  description: 'Manage your blog posts',
+  name: 'blogcms',
+  displayName: 'blogcms',
+  slug: 'blogcms',
+  description: 'Blog CMS content',
   icon: '📝',
 
   schema: {
@@ -44,7 +44,7 @@ export default {
         title: 'Featured Image'
       },
       author: {
-        type: 'user',
+        type: 'string',
         title: 'Author',
         required: true
       },
@@ -56,6 +56,10 @@ export default {
         type: 'string',
         title: 'Tags',
         helpText: 'Comma-separated tags'
+      },
+      banner_image: {
+        type: 'string',
+        title: 'Banner Image'
       }
     },
     required: ['title', 'slug', 'content', 'author']
@@ -69,12 +73,10 @@ export default {
   managed: true,
   isActive: true,
 
-  // Opt in to public read access for the public API
   access: {
     public: ['read']
   },
 
-  // Per-collection cache (seconds)
   cache: {
     enabled: true,
     ttl: 300
