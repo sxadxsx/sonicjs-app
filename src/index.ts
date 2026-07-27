@@ -4,6 +4,18 @@
  * Entry point for your SonicJS headless CMS on Cloudflare Workers.
  */
 
+// Disable SonicJS product telemetry before core bootstrap runs.
+// Core reads process.env (not Worker bindings) via safeGetEnv().
+;(() => {
+  const g = globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> }
+  }
+  if (!g.process) g.process = { env: {} }
+  if (!g.process.env) g.process.env = {}
+  g.process.env.SONICJS_TELEMETRY = 'false'
+  g.process.env.DO_NOT_TRACK = '1'
+})()
+
 import { createSonicJSApp, registerCollections } from '@sonicjs-cms/core'
 import type { SonicJSConfig } from '@sonicjs-cms/core'
 

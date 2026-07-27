@@ -41,13 +41,16 @@ preview_id = "64d13dd9c8ac49fa93205ac22202d08e"
 ENVIRONMENT = "development"
 # Comma-separated browser origins allowed for CORS (adjust for your domains)
 CORS_ORIGINS = "http://localhost:8787,https://sonicjs-app.cms-74e.workers.dev,https://sonicjs-app-production.cms-74e.workers.dev"
+# SonicJS product telemetry (stats.sonicjs.com) — disabled
+SONICJS_TELEMETRY = "false"
+DO_NOT_TRACK = "1"
 
 [observability]
 enabled = true
 
 [env.production]
 name = "sonicjs-app-production"
-vars = { ENVIRONMENT = "production", CORS_ORIGINS = "https://sonicjs-app-production.cms-74e.workers.dev,https://sonicjs-app.cms-74e.workers.dev" }
+vars = { ENVIRONMENT = "production", CORS_ORIGINS = "https://sonicjs-app-production.cms-74e.workers.dev,https://sonicjs-app.cms-74e.workers.dev", SONICJS_TELEMETRY = "false", DO_NOT_TRACK = "1" }
 
 [[env.production.d1_databases]]
 binding = "DB"
