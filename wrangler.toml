@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Workers settings
 workers_dev = true
+account_id = "74e50d323e8da3847ee86ef23bee8a1b"
 
 # D1 Database
 [[d1_databases]]
@@ -18,19 +19,53 @@ migrations_dir = "./node_modules/@sonicjs-cms/core/migrations"
 binding = "BUCKET"
 bucket_name = "sonicjs-media"
 
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "sonicjs-media"
+
+# Legacy/general KV (existing namespace titled "kv")
+[[kv_namespaces]]
+binding = "KV"
+id = "6ba1caad5eee4c448e0ba09f27c55416"
+
+# Cache KV used by SonicJS cache plugin / rate limiting
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "d5bdcffafd80410d8425637095607e3e"
+preview_id = "64d13dd9c8ac49fa93205ac22202d08e"
+
 # Environment variables
 [vars]
 ENVIRONMENT = "development"
+
+# Observability
+[observability]
+enabled = true
 
 # Production environment
 [env.production]
 name = "sonicjs-app-production"
 vars = { ENVIRONMENT = "production" }
 
-# Observability
-[observability]
-enabled = true
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "sonicjs-db"
+database_id = "2fd144ed-cd8f-40f4-b86d-b14068a2708f"
+migrations_dir = "./node_modules/@sonicjs-cms/core/migrations"
 
-[[kv_namespaces]]
+[[env.production.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "sonicjs-media"
+
+[[env.production.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "sonicjs-media"
+
+[[env.production.kv_namespaces]]
 binding = "KV"
 id = "6ba1caad5eee4c448e0ba09f27c55416"
+
+[[env.production.kv_namespaces]]
+binding = "CACHE_KV"
+id = "6ce3312943cb4fc792746d4a8232b1da"
+preview_id = "6a233acad0cd43b28e0eb23e2d96d440"
