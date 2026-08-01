@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@sonicjs-cms/core": "^3.0.0-beta.26",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.0",
     "hono": "^4.12.32",
     "zod": "^4.4.3"
   },
